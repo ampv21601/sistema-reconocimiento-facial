@@ -3,7 +3,8 @@ from sqlalchemy import create_engine  # Crea el motor de conexión a la base de 
 from sqlalchemy.orm import sessionmaker, declarative_base  # Gestión de sesiones y base ORM
 
 # Obtiene la URL de conexión desde una variable de entorno
-# DATABASE_URL = os.getenv("DATABASE_URL")
+# DATABASE_URL = os.getenv("
+# DATABASE_URL")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@db:5432/user_recognition_db")
 
 # Valida que la variable de entorno esté definida
