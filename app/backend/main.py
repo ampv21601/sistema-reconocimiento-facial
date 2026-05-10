@@ -28,7 +28,7 @@ app.add_middleware(
 app.include_router(person_router)
 
 # rutas frontend
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 FRONTEND = BASE_DIR / "frontend"
 
 # servir archivos estáticos
@@ -37,11 +37,9 @@ FRONTEND = BASE_DIR / "frontend"
 # página principal
 @app.get("/")
 def root():
-    # return {"message": "Bienvenido a la API de reconocimiento facial. Use /persona.html para acceder a la página de personas."}
-    return FileResponse(FRONTEND / "index.html")
+    return {"message": "API de reconocimiento facial. Frontend disponible en http://localhost:5173"}
 
 # página persona
 @app.get("/persona.html")
 def persona():
-    # return {"message": "Esta es la página de personas. Aquí se mostrarán las personas reconocidas."}
-    return FileResponse(FRONTEND / "persona.html")
+    return {"message": "Esta es la página de personas. Aquí se mostrarán las personas reconocidas."}

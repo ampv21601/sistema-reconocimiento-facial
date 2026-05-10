@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = None
     BACKEND_PORT: int = None
 
-    ALLOWED_ORIGINS: str = ""
+    ALLOWED_ORIGINS: str = "http://localhost:5173"
 
     def __init__(self, **values):
         super().__init__(**values)

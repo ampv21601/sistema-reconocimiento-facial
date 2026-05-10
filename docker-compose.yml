@@ -18,6 +18,18 @@ services:
     env_file:
       - .env
 
+  frontend:
+    image: node:20-alpine
+    working_dir: /app/frontend
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules  # Volumen anónimo para node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install --legacy-peer-deps && npm run dev"
+    environment:
+      - VITE_API_URL=http://backend:${BACKEND_PORT}
+
   db:
     image: postgres:15
     restart: always
