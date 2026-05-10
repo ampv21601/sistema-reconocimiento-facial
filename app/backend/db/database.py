@@ -2,8 +2,10 @@ import os  # Permite acceder a variables de entorno del sistema
 from sqlalchemy import create_engine  # Crea el motor de conexión a la base de datos
 from sqlalchemy.orm import sessionmaker, declarative_base  # Gestión de sesiones y base ORM
 
+from app.backend.core.config import settings  # Importa la configuración de la aplicación
+
 # Obtiene la URL de conexión desde una variable de entorno
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@db:5432/user_recognition_db")
+DATABASE_URL = settings.DATABASE_URL
 
 # Valida que la variable de entorno esté definida
 if not DATABASE_URL:

@@ -7,4 +7,4 @@ psycopg2-binary
 numpy
 pgvector
 python-multipart
-face_recognition
+pydantic-settings
