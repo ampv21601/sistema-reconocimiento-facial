@@ -3,17 +3,17 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copiar archivos de dependencias
-COPY frontend/package*.json ./
+# Copiar package.json primero (mejor para caché de Docker)
+COPY app/frontend/package*.json ./
 
 # Instalar dependencias
 RUN npm install
 
-# Copiar el resto del código del frontend
-COPY frontend/ ./
+# Copiar el resto del código
+COPY app/frontend/ ./
 
-# Exponer puerto de Vite
+# Exponer puerto
 EXPOSE 5173
 
-# Comando para desarrollo con hot-reload
+# Comando para desarrollo
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

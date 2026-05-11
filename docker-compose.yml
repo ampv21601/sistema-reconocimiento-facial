@@ -19,16 +19,18 @@ services:
       - .env
 
   frontend:
-    image: node:20-alpine
-    working_dir: /app/frontend
-    volumes:
-      - ./app/frontend:/app/frontend
-      - /app/frontend/node_modules  # Volumen anónimo para node_modules
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
     ports:
       - "5173:5173"
-    command: sh -c "npm install --legacy-peer-deps && npm run dev"
+    volumes:
+      - ./app/frontend:/app
+      - /app/node_modules  # Volumen anónimo para node_modules
     environment:
       - VITE_API_URL=http://backend:${BACKEND_PORT}
+      - CHOKIDAR_USEPOLLING=true  # Para hot-reload en Docker
+    command: sh -c "npm install && npm run dev"
 
   db:
     image: postgres:15
