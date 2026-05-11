@@ -3,6 +3,24 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 
+class KnownPersonBase(BaseModel):
+    name: str
+    vector: List[float]
+    person_person_metadata: Optional[dict] = None
+
+
+class KnownPersonCreate(KnownPersonBase):
+    pass
+
+
+class KnownPersonRead(KnownPersonBase):
+    id: int
+    registered_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
 class DetectionBase(BaseModel):
     vector: List[float]
 
@@ -17,24 +35,7 @@ class DetectionRead(DetectionBase):
     last_moment: Optional[datetime]
     recognized: bool
     known_person_id: Optional[int]
-
-    class Config:
-        orm_mode = True
-
-
-class KnownPersonBase(BaseModel):
-    name: str
-    vector: List[float]
-    person_person_metadata: Optional[dict] = None
-
-
-class KnownPersonCreate(KnownPersonBase):
-    pass
-
-
-class KnownPersonRead(KnownPersonBase):
-    id: int
-    registered_at: datetime
+    known_person: Optional[KnownPersonRead] = None
 
     class Config:
         orm_mode = True

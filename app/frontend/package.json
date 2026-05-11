@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "face-api.js": "^0.22.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
