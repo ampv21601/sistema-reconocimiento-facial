@@ -15,25 +15,15 @@ import {
   Box,
   TextField,
   InputAdornment,
+  IconButton,
+  Button,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-
-// Datos de ejemplo
-const generateSampleLogs = () => {
-  const names = ['Ana García', 'Carlos López', 'María Rodríguez', 'Juan Pérez', 'Laura Martínez'];
-  const statuses = ['reconocido', 'no reconocido'];
-  
-  return Array.from({ length: 15 }, (_, i) => ({
-    id: i + 1,
-    name: names[Math.floor(Math.random() * names.length)],
-    timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
-    status: statuses[Math.floor(Math.random() * statuses.length)],
-    confidence: Math.floor(Math.random() * 30) + 70,
-  }));
-};
+import DeleteIcon from '@mui/icons-material/Delete';
+import DownloadIcon from '@mui/icons-material/Download';
 
 const PersonLogs = () => {
   const [logs, setLogs] = useState([]);
@@ -41,10 +31,16 @@ const PersonLogs = () => {
   const [filteredLogs, setFilteredLogs] = useState([]);
 
   useEffect(() => {
-    const sampleLogs = generateSampleLogs();
-    setLogs(sampleLogs);
-    setFilteredLogs(sampleLogs);
+    loadLogs();
   }, []);
+
+  const loadLogs = () => {
+    const savedLogs = localStorage.getItem('detectionLogs');
+    if (savedLogs) {
+      setLogs(JSON.parse(savedLogs));
+      setFilteredLogs(JSON.parse(savedLogs));
+    }
+  };
 
   useEffect(() => {
     const filtered = logs.filter(log =>
@@ -64,15 +60,54 @@ const PersonLogs = () => {
     return new Intl.DateTimeFormat('es-ES', {
       dateStyle: 'medium',
       timeStyle: 'medium',
-    }).format(date);
+    }).format(new Date(date));
+  };
+
+  const clearLogs = () => {
+    if (window.confirm('¿Estás seguro de que quieres borrar todo el historial?')) {
+      localStorage.removeItem('detectionLogs');
+      setLogs([]);
+      setFilteredLogs([]);
+    }
+  };
+
+  const exportLogs = () => {
+    const dataStr = JSON.stringify(logs, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = `detection_logs_${new Date().toISOString()}.json`;
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
   };
 
   return (
     <Card>
       <CardContent>
-        <Typography variant="h5" gutterBottom>
-          Historial de Detecciones
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
+          <Typography variant="h5" gutterBottom>
+            Historial de Detecciones
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={exportLogs}
+              size="small"
+            >
+              Exportar
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={clearLogs}
+              size="small"
+            >
+              Limpiar
+            </Button>
+          </Box>
+        </Box>
         <Typography variant="body2" color="textSecondary" paragraph>
           Registro de todas las personas detectadas en el sistema
         </Typography>
