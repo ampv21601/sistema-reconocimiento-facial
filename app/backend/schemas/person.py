@@ -1,12 +1,13 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 
 
 class KnownPersonBase(BaseModel):
     name: str
+    surname: str
     vector: List[float]
-    person_person_metadata: Optional[dict] = None
+    person_metadata: Optional[Dict[str, Any]] = None
 
 
 class KnownPersonCreate(KnownPersonBase):
@@ -18,7 +19,7 @@ class KnownPersonRead(KnownPersonBase):
     registered_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class DetectionBase(BaseModel):
@@ -38,4 +39,4 @@ class DetectionRead(DetectionBase):
     known_person: Optional[KnownPersonRead] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True

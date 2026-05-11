@@ -2,15 +2,17 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Dependencias del sistema (importante para dlib)
+# Instalar dependencias del sistema para face-recognition
 RUN apt-get update && apt-get install -y \
-    libglib2.0-0 \
+    build-essential \
+    cmake \
     libgl1 \
+    libglib2.0-0 \
     libsm6 \
     libxext6 \
-    libxrender-dev \
-    cmake \
-    build-essential \
+    libxrender1 \
+    libgomp1 \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

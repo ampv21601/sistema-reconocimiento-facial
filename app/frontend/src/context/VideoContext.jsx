@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
+import axios from 'axios';
 
 const VideoContext = createContext();
 
@@ -9,6 +10,8 @@ export const useVideo = () => {
   }
   return context;
 };
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const VideoProvider = ({ children }) => {
   // Estado principal
@@ -26,6 +29,7 @@ export const VideoProvider = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [detection, setDetection] = useState(null);
   const [detectedPerson, setDetectedPerson] = useState(null);
+  const [detectionConfidence, setDetectionConfidence] = useState(0); // ← AÑADIR ESTA LÍNEA
   const [message, setMessage] = useState(null);
   const [isDetecting, setIsDetecting] = useState(false);
   const [webcamEnabled, setWebcamEnabled] = useState(() => {
@@ -33,68 +37,113 @@ export const VideoProvider = ({ children }) => {
     return saved === 'true';
   });
   const [screenshot, setScreenshot] = useState(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [savedVideoBlob, setSavedVideoBlob] = useState(null);
-
-  // Refs
+  
   const videoRef = useRef(null);
   const webcamRef = useRef(null);
   const detectionInterval = useRef(null);
 
-  // Persistir estado en localStorage
-  useEffect(() => {
-    localStorage.setItem('videoSourceType', sourceType);
-  }, [sourceType]);
-
-  useEffect(() => {
-    if (videoUrl) {
-      localStorage.setItem('videoUrl', videoUrl);
-    } else {
-      localStorage.removeItem('videoUrl');
+  // Función para capturar frame del video
+  const captureFrame = () => {
+    let source = null;
+    
+    if (sourceType === 'upload' && videoRef.current && videoRef.current.readyState >= 2) {
+      source = videoRef.current;
+    } else if (sourceType === 'webcam' && webcamRef.current && webcamRef.current.video.readyState === 4) {
+      source = webcamRef.current.video;
     }
-  }, [videoUrl]);
-
-  useEffect(() => {
-    localStorage.setItem('webcamEnabled', webcamEnabled);
-  }, [webcamEnabled]);
-
-  // Guardar el blob del video cuando se carga
-  useEffect(() => {
-    if (videoFile) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const blob = new Blob([reader.result], { type: videoFile.type });
-        setSavedVideoBlob(blob);
-        localStorage.setItem('savedVideoBlob', reader.result);
-      };
-      reader.readAsDataURL(videoFile);
+    
+    if (source) {
+      const canvas = document.createElement('canvas');
+      canvas.width = source.videoWidth;
+      canvas.height = source.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg', 0.8);
     }
-  }, [videoFile]);
+    return null;
+  };
 
-  // Recuperar video guardado al iniciar
-  useEffect(() => {
-    const savedBlob = localStorage.getItem('savedVideoBlob');
-    if (savedBlob && !videoUrl) {
-      fetch(savedBlob)
-        .then(res => res.blob())
-        .then(blob => {
-          const url = URL.createObjectURL(blob);
-          setVideoUrl(url);
+  // Función para enviar frame al backend y detectar
+  const sendFrameForDetection = async () => {
+    if ((sourceType === 'upload' && !isPlaying) || (sourceType === 'webcam' && !webcamEnabled)) {
+      return;
+    }
+    
+    const frameData = captureFrame();
+    if (!frameData) return;
+    
+    setIsDetecting(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', frameData);
+      
+      const response = await axios.post(`${API_URL}/detect-frame`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 10000,
+      });
+      
+      if (response.data.detected) {
+        setDetection('green');
+        setDetectedPerson(response.data.person_name);
+        setDetectionConfidence(response.data.confidence || 0); // ← AÑADIR ESTA LÍNEA
+        
+        const newLog = {
+          id: Date.now(),
+          name: response.data.person_name,
+          timestamp: new Date().toISOString(),
+          status: response.data.person_name !== 'Persona no registrada' ? 'reconocido' : 'no reconocido',
+          confidence: response.data.confidence || 0
+        };
+        
+        const existingLogs = JSON.parse(localStorage.getItem('detectionLogs') || '[]');
+        localStorage.setItem('detectionLogs', JSON.stringify([newLog, ...existingLogs].slice(0, 100)));
+        
+        setMessage({ 
+          type: response.data.person_name !== 'Persona no registrada' ? 'success' : 'warning', 
+          text: `✅ ${response.data.person_name} (${response.data.confidence}% confianza)`
         });
+      } else {
+        setDetection('red');
+        setDetectedPerson(null);
+        setDetectionConfidence(0); // ← AÑADIR ESTA LÍNEA
+        setMessage({ type: 'error', text: '❌ No se detectaron rostros' });
+      }
+      
+      setTimeout(() => setMessage(null), 2000);
+    } catch (error) {
+      console.error('Error en detección:', error);
+      setDetection('red');
+      setDetectionConfidence(0); // ← AÑADIR ESTA LÍNEA
+      setMessage({ type: 'error', text: 'Error de conexión con el servidor' });
+      setTimeout(() => setMessage(null), 2000);
+    } finally {
+      setIsDetecting(false);
     }
-  }, []);
+  };
 
-  // Guardar tiempo del video
+  // Iniciar detección periódica
   useEffect(() => {
-    if (videoRef.current && isPlaying) {
-      const interval = setInterval(() => {
-        setCurrentTime(videoRef.current.currentTime);
-      }, 1000);
-      return () => clearInterval(interval);
+    if ((sourceType === 'upload' && isPlaying && videoUrl) || 
+        (sourceType === 'webcam' && webcamEnabled)) {
+      if (detectionInterval.current) {
+        clearInterval(detectionInterval.current);
+      }
+      detectionInterval.current = setInterval(sendFrameForDetection, 2000);
+    } else if (detectionInterval.current) {
+      clearInterval(detectionInterval.current);
     }
-  }, [isPlaying]);
+    
+    return () => {
+      if (detectionInterval.current) {
+        clearInterval(detectionInterval.current);
+      }
+    };
+  }, [isPlaying, webcamEnabled, sourceType, videoUrl]);
 
-  // Funciones para manejar el video
+  // Handle video upload
   const handleVideoUpload = (file) => {
     if (file && file.type.startsWith('video/')) {
       const url = URL.createObjectURL(file);
@@ -102,27 +151,31 @@ export const VideoProvider = ({ children }) => {
       setVideoFile(file);
       setWebcamEnabled(false);
       setDetection(null);
+      setDetectedPerson(null);
+      setDetectionConfidence(0); // ← AÑADIR ESTA LÍNEA
       setMessage({ type: 'success', text: 'Video cargado correctamente' });
       setTimeout(() => setMessage(null), 3000);
-      
-      if (detectionInterval.current) {
-        clearInterval(detectionInterval.current);
-      }
       return true;
     }
     return false;
   };
 
+  // Webcam controls
   const startWebcam = () => {
     setWebcamEnabled(true);
     setVideoUrl(null);
-    setMessage({ type: 'info', text: 'Cámara web activada' });
+    setDetection(null);
+    setDetectedPerson(null);
+    setDetectionConfidence(0); // ← AÑADIR ESTA LÍNEA
+    setMessage({ type: 'info', text: 'Cámara web activada - Iniciando detección...' });
     setTimeout(() => setMessage(null), 2000);
   };
 
   const stopWebcam = () => {
     setWebcamEnabled(false);
     setDetection(null);
+    setDetectedPerson(null);
+    setDetectionConfidence(0); // ← AÑADIR ESTA LÍNEA
     if (detectionInterval.current) {
       clearInterval(detectionInterval.current);
     }
@@ -130,16 +183,18 @@ export const VideoProvider = ({ children }) => {
     setTimeout(() => setMessage(null), 2000);
   };
 
+  // Capture screenshot
   const captureScreenshot = () => {
-    if (webcamRef.current) {
-      const imageSrc = webcamRef.current.getScreenshot();
-      setScreenshot(imageSrc);
-      localStorage.setItem('lastScreenshot', imageSrc);
-      setMessage({ type: 'success', text: 'Captura de pantalla guardada' });
+    const frameData = captureFrame();
+    if (frameData) {
+      setScreenshot(frameData);
+      localStorage.setItem('lastScreenshot', frameData);
+      setMessage({ type: 'success', text: 'Captura guardada' });
       setTimeout(() => setMessage(null), 2000);
     }
   };
 
+  // Toggle play/pause
   const togglePlayPause = () => {
     if (videoRef.current) {
       if (isPlaying) {
@@ -151,6 +206,7 @@ export const VideoProvider = ({ children }) => {
     }
   };
 
+  // Change source type
   const handleSourceChange = (newSource) => {
     if (newSource !== null) {
       setSourceType(newSource);
@@ -160,65 +216,15 @@ export const VideoProvider = ({ children }) => {
         setVideoUrl(null);
       }
       setDetection(null);
+      setDetectedPerson(null);
+      setDetectionConfidence(0); // ← AÑADIR ESTA LÍNEA
       if (detectionInterval.current) {
         clearInterval(detectionInterval.current);
       }
     }
   };
 
-  const simulateDetection = () => {
-    setIsDetecting(true);
-    setTimeout(() => {
-      const random = Math.random();
-      const personas = ['Ana García', 'Carlos López', 'María Rodríguez', 'Juan Pérez'];
-      if (random > 0.6) {
-        const persona = personas[Math.floor(Math.random() * personas.length)];
-        setDetection('green');
-        setDetectedPerson(persona);
-        // Guardar detección en localStorage para logs
-        const newLog = {
-          id: Date.now(),
-          name: persona,
-          timestamp: new Date().toISOString(),
-          status: 'reconocido',
-          confidence: Math.floor(Math.random() * 30) + 70
-        };
-        const existingLogs = JSON.parse(localStorage.getItem('detectionLogs') || '[]');
-        localStorage.setItem('detectionLogs', JSON.stringify([newLog, ...existingLogs].slice(0, 50)));
-        setMessage({ type: 'success', text: `✅ ${persona} detectado correctamente` });
-      } else if (random > 0.3) {
-        setDetection('green');
-        setDetectedPerson('Persona no registrada');
-        setMessage({ type: 'warning', text: '⚠️ Persona detectada pero no registrada' });
-      } else {
-        setDetection('red');
-        setDetectedPerson(null);
-        setMessage({ type: 'error', text: '❌ No se detectaron personas' });
-      }
-      setIsDetecting(false);
-      setTimeout(() => setMessage(null), 2000);
-    }, 1000);
-  };
-
-  // Efecto para la detección continua
-  useEffect(() => {
-    if ((isPlaying || webcamEnabled) && (videoUrl || webcamEnabled)) {
-      if (detectionInterval.current) {
-        clearInterval(detectionInterval.current);
-      }
-      detectionInterval.current = setInterval(simulateDetection, 4000);
-    } else if (detectionInterval.current) {
-      clearInterval(detectionInterval.current);
-    }
-    
-    return () => {
-      if (detectionInterval.current) {
-        clearInterval(detectionInterval.current);
-      }
-    };
-  }, [isPlaying, webcamEnabled, videoUrl]);
-
-  // Recuperar screenshot guardado
+  // Restaurar screenshot guardado
   useEffect(() => {
     const savedScreenshot = localStorage.getItem('lastScreenshot');
     if (savedScreenshot) {
@@ -234,14 +240,13 @@ export const VideoProvider = ({ children }) => {
     isPlaying,
     detection,
     detectedPerson,
+    detectionConfidence, // ← AÑADIR ESTA LÍNEA
     message,
     isDetecting,
     webcamEnabled,
     screenshot,
-    currentTime,
     videoRef,
     webcamRef,
-    savedVideoBlob,
     
     // Funciones
     setSourceType: handleSourceChange,
@@ -250,11 +255,11 @@ export const VideoProvider = ({ children }) => {
     setIsPlaying,
     setDetection,
     setDetectedPerson,
+    setDetectionConfidence, // ← AÑADIR ESTA LÍNEA
     setMessage,
     setIsDetecting,
     setWebcamEnabled,
     setScreenshot,
-    setCurrentTime,
     
     // Acciones
     handleVideoUpload,
@@ -263,7 +268,7 @@ export const VideoProvider = ({ children }) => {
     captureScreenshot,
     togglePlayPause,
     handleSourceChange,
-    simulateDetection,
+    sendFrameForDetection,
   };
 
   return (

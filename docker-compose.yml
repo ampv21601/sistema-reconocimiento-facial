@@ -26,27 +26,25 @@ services:
       - "5173:5173"
     volumes:
       - ./app/frontend:/app
-      - /app/node_modules  # Volumen anónimo para node_modules
+      - /app/node_modules
     environment:
-      - VITE_API_URL=http://backend:${BACKEND_PORT}
-      - CHOKIDAR_USEPOLLING=true  # Para hot-reload en Docker
+      - VITE_API_URL=http://localhost:${BACKEND_PORT}  # ← CAMBIAR a localhost
+      - CHOKIDAR_USEPOLLING=true
     command: sh -c "npm install && npm run dev"
 
   db:
-    image: postgres:15
+    image: pgvector/pgvector:pg15
     restart: always
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    env_file:
-      - .env
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: facial_recognition
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5

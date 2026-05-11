@@ -94,6 +94,7 @@ const VideoPlayer = () => {
     togglePlayPause,
     handleSourceChange,
     setMessage,
+    detectionConfidence,
   } = useVideo();
 
   const fileInputRef = React.useRef(null);
@@ -222,7 +223,7 @@ const VideoPlayer = () => {
                 <Zoom in={!!detection}>
                   <DetectionOverlay detection={detection === 'green' ? 'green' : 'red'}>
                     {detection === 'green' 
-                      ? `🟢 ${detectedPerson || 'Persona Detectada'}` 
+                      ? `🟢 ${detectedPerson || 'Persona Detectada'} ${detectionConfidence > 0 ? `(${detectionConfidence}%)` : ''}` 
                       : detection === 'red' 
                       ? '🔴 SIN PERSONA' 
                       : '🟡 DETECTANDO...'}
@@ -293,7 +294,7 @@ const VideoPlayer = () => {
                     <Zoom in={!!detection}>
                       <DetectionOverlay detection={detection === 'green' ? 'green' : 'red'}>
                         {detection === 'green' 
-                          ? `🟢 ${detectedPerson || 'Persona Detectada'}` 
+                          ? `🟢 ${detectedPerson || 'Persona Detectada'} ${detectionConfidence > 0 ? `(${detectionConfidence}%)` : ''}` 
                           : detection === 'red' 
                           ? '🔴 SIN PERSONA' 
                           : '🟡 DETECTANDO...'}

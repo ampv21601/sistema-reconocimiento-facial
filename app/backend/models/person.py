@@ -4,7 +4,6 @@ from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 from app.backend.db.database import Base
 
-
 class Detection(Base):
     __tablename__ = "detection"
 
@@ -27,7 +26,5 @@ class KnownPerson(Base):
     vector = Column(Vector(128), nullable=False)
     registered_at = Column(DateTime(timezone=True), server_default=func.now())
     person_metadata = Column(JSON, nullable=True)
-
-
 
     detections = relationship("Detection", back_populates="known_person")

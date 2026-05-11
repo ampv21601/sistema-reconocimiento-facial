@@ -9,10 +9,16 @@ import {
   Avatar,
   Alert,
   Grid,
+  CircularProgress,
+  Stepper,
+  Step,
+  StepLabel,
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import AddAPhotoIcon from '@mui/icons-material/AddAPhoto';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { styled } from '@mui/material/styles';
+import axios from 'axios';
 
 const VisuallyHiddenInput = styled('input')({
   clip: 'rect(0 0 0 0)',
@@ -26,9 +32,13 @@ const VisuallyHiddenInput = styled('input')({
   width: 1,
 });
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const AddPersonForm = () => {
+  const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
+    surname: '',
     email: '',
     role: '',
   });
@@ -36,6 +46,8 @@ const AddPersonForm = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const steps = ['Datos personales', 'Foto', 'Confirmación'];
 
   const handleChange = (e) => {
     setFormData({
@@ -60,31 +72,181 @@ const AddPersonForm = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!formData.name || !image) {
+  const handleNext = () => {
+    if (activeStep === 0 && (!formData.name || !formData.surname)) {
+      setMessage({ type: 'error', text: 'Por favor, completa nombre y apellido' });
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+    if (activeStep === 1 && !image) {
+      setMessage({ type: 'error', text: 'Por favor, añade una foto' });
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+    setActiveStep((prevStep) => prevStep + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevStep) => prevStep - 1);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.surname || !image) {
       setMessage({ type: 'error', text: 'Por favor, completa todos los campos y añade una imagen' });
       return;
     }
 
     setLoading(true);
     
-    // Simulación de envío
-    setTimeout(() => {
-      console.log('Datos de persona:', {
-        ...formData,
-        image: image,
+    const formDataToSend = new FormData();
+    formDataToSend.append('name', formData.name);
+    formDataToSend.append('surname', formData.surname);
+    formDataToSend.append('email', formData.email);
+    formDataToSend.append('role', formData.role);
+    formDataToSend.append('image', image);
+    
+    try {
+      const response = await axios.post(`${API_URL}/add-person`, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 30000, // 30 segundos para procesar la imagen
       });
       
-      setMessage({ type: 'success', text: `Persona "${formData.name}" añadida correctamente` });
-      setFormData({ name: '', email: '', role: '' });
-      setImage(null);
-      setImagePreview(null);
+      if (response.data.success) {
+        setMessage({ 
+          type: 'success', 
+          text: `✅ ${formData.name} ${formData.surname} añadido correctamente al sistema` 
+        });
+        // Reset form
+        setFormData({ name: '', surname: '', email: '', role: '' });
+        setImage(null);
+        setImagePreview(null);
+        setActiveStep(0);
+        
+        // Opcional: notificar al sistema que hay una nueva persona
+        // para actualizar la lista de personas conocidas
+      } else {
+        setMessage({ type: 'error', text: response.data.error || 'Error al guardar la persona' });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      if (error.response?.status === 400) {
+        setMessage({ type: 'error', text: error.response.data.detail || 'Error en los datos enviados' });
+      } else if (error.response?.status === 500) {
+        setMessage({ type: 'error', text: 'Error del servidor. Asegúrate de que la imagen tenga un rostro visible' });
+      } else {
+        setMessage({ type: 'error', text: 'Error de conexión con el servidor' });
+      }
+    } finally {
       setLoading(false);
-      
-      setTimeout(() => setMessage(null), 3000);
-    }, 2000);
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
+
+  const getStepContent = (step) => {
+    switch (step) {
+      case 0:
+        return (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Nombre"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                variant="outlined"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Apellido"
+                name="surname"
+                value={formData.surname}
+                onChange={handleChange}
+                required
+                variant="outlined"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                variant="outlined"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Rol / Departamento"
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                variant="outlined"
+              />
+            </Grid>
+          </Grid>
+        );
+      case 1:
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+            <Avatar
+              src={imagePreview}
+              sx={{
+                width: 250,
+                height: 250,
+                mb: 3,
+                border: '3px solid #1976d2',
+              }}
+            >
+              {!imagePreview && <AddAPhotoIcon sx={{ fontSize: 80 }} />}
+            </Avatar>
+            
+            <Button
+              component="label"
+              variant="contained"
+              startIcon={<PhotoCameraIcon />}
+              sx={{ mt: 2 }}
+            >
+              {imagePreview ? 'Cambiar foto' : 'Seleccionar foto'}
+              <VisuallyHiddenInput
+                type="file"
+                accept="image/*"
+                onChange={handleImageCapture}
+                capture="environment"
+              />
+            </Button>
+            <Typography variant="caption" color="textSecondary" sx={{ mt: 2, textAlign: 'center' }}>
+              La foto debe mostrar claramente el rostro de la persona<br />
+              Formatos soportados: JPG, PNG
+            </Typography>
+          </Box>
+        );
+      case 2:
+        return (
+          <Box sx={{ py: 4 }}>
+            <Typography variant="h6" gutterBottom>Confirmar datos</Typography>
+            <Card variant="outlined" sx={{ p: 3, mb: 3 }}>
+              <Typography><strong>Nombre:</strong> {formData.name} {formData.surname}</Typography>
+              {formData.email && <Typography><strong>Email:</strong> {formData.email}</Typography>}
+              {formData.role && <Typography><strong>Rol:</strong> {formData.role}</Typography>}
+              <Typography><strong>Foto:</strong> {imagePreview ? '✓ Imagen cargada' : '✗ Sin imagen'}</Typography>
+            </Card>
+            <Alert severity="info">
+              Al confirmar, el sistema procesará la imagen y extraerá las características faciales para el reconocimiento.
+            </Alert>
+          </Box>
+        );
+      default:
+        return 'Unknown step';
+    }
   };
 
   return (
@@ -94,89 +256,50 @@ const AddPersonForm = () => {
           Añadir Nueva Persona
         </Typography>
         <Typography variant="body2" color="textSecondary" paragraph>
-          Completa el formulario para registrar una nueva persona en el sistema de reconocimiento facial
+          Registra una nueva persona en el sistema de reconocimiento facial
         </Typography>
 
         {message && (
-          <Alert severity={message.type} sx={{ mb: 3 }}>
+          <Alert severity={message.type} sx={{ mb: 3 }} onClose={() => setMessage(null)}>
             {message.text}
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <Avatar
-                  src={imagePreview}
-                  sx={{
-                    width: 200,
-                    height: 200,
-                    mb: 2,
-                    border: '3px solid #1976d2',
-                  }}
-                >
-                  {!imagePreview && <AddAPhotoIcon sx={{ fontSize: 60 }} />}
-                </Avatar>
-                
-                <Button
-                  component="label"
-                  variant="outlined"
-                  startIcon={<PhotoCameraIcon />}
-                  sx={{ mt: 2 }}
-                >
-                  Subir/Añadir Imagen
-                  <VisuallyHiddenInput
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageCapture}
-                  />
-                </Button>
-              </Box>
-            </Grid>
+        <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
 
-            <Grid item xs={12} md={8}>
-              <TextField
-                fullWidth
-                label="Nombre completo"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                sx={{ mb: 2 }}
-              />
-              
-              <TextField
-                fullWidth
-                label="Email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                sx={{ mb: 2 }}
-              />
-              
-              <TextField
-                fullWidth
-                label="Rol / Departamento"
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                sx={{ mb: 3 }}
-              />
-
-              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                <Button
-                  variant="contained"
-                  type="submit"
-                  disabled={loading}
-                  size="large"
-                >
-                  {loading ? 'Guardando...' : 'Guardar Persona'}
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
+        <form>
+          {getStepContent(activeStep)}
+          
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4, gap: 2 }}>
+            {activeStep !== 0 && (
+              <Button onClick={handleBack}>
+                Atrás
+              </Button>
+            )}
+            {activeStep === steps.length - 1 ? (
+              <Button
+                variant="contained"
+                onClick={handleSubmit}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} /> : <CheckCircleIcon />}
+              >
+                {loading ? 'Guardando...' : 'Confirmar y Guardar'}
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleNext}
+              >
+                Siguiente
+              </Button>
+            )}
+          </Box>
         </form>
       </CardContent>
     </Card>
