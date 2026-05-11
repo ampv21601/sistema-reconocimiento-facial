@@ -107,7 +107,7 @@ const AddPersonForm = () => {
     formDataToSend.append('image', image);
     
     try {
-      const response = await axios.post(`${API_URL}/add-person`, formDataToSend, {
+      const response = await axios.post(`${API_URL}/api/add-person`, formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

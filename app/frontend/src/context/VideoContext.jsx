@@ -78,7 +78,7 @@ export const VideoProvider = ({ children }) => {
       const formData = new FormData();
       formData.append('image', frameData);
       
-      const response = await axios.post(`${API_URL}/detect-frame`, formData, {
+      const response = await axios.post(`${API_URL}/api/detect-frame`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

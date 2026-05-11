@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-from app.backend.db.database import SessionLocal
+from app.backend.db.database import get_db
 from app.backend.models.person import Detection, KnownPerson
 from app.backend.schemas.person import (
     DetectionCreate,
@@ -14,13 +15,6 @@ from app.backend.schemas.person import (
 from app.backend.services.face_recognition import match_known_person, vector_distance
 
 router = APIRouter()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.post("/known_persons", response_model=KnownPersonRead)
 def create_known_person(payload: KnownPersonCreate, db: Session = Depends(get_db)):
@@ -53,12 +47,37 @@ def list_known_persons(
 ):
     return db.query(KnownPerson).offset(skip).limit(limit).all()
 
+@router.get("/known_persons/stats")
+def get_known_persons_stats(db: Session = Depends(get_db)):
+    """Obtiene estadísticas de las personas registradas"""
+    total = db.query(KnownPerson).count()
+    
+    # Personas que han sido detectadas al menos una vez
+    detected = db.query(KnownPerson).join(Detection).distinct().count()
+    
+    # Últimas personas registradas
+    latest = db.query(KnownPerson).order_by(KnownPerson.registered_at.desc()).limit(5).all()
+    
+    return {
+        "total": total,
+        "detected": detected,
+        "not_detected": total - detected,
+        "latest": [
+            {
+                "id": p.id,
+                "name": f"{p.name} {p.surname}",
+                "registered_at": p.registered_at.isoformat()
+            } for p in latest
+        ]
+    }
+
 @router.get("/known_persons/{person_id}", response_model=KnownPersonRead)
 def get_known_person(person_id: int, db: Session = Depends(get_db)):
     person = db.query(KnownPerson).filter(KnownPerson.id == person_id).first()
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
     return person
+
 
 @router.put("/known_persons/{person_id}")
 def update_known_person(
@@ -83,6 +102,7 @@ def update_known_person(
     db.refresh(person)
     return {"message": "Person updated successfully", "person": person}
 
+
 @router.delete("/known_persons/{person_id}")
 def delete_known_person(person_id: int, db: Session = Depends(get_db)):
     person = db.query(KnownPerson).filter(KnownPerson.id == person_id).first()
@@ -92,30 +112,6 @@ def delete_known_person(person_id: int, db: Session = Depends(get_db)):
     db.delete(person)
     db.commit()
     return {"message": "Person deleted successfully"}
-
-@router.get("/known_persons/stats")
-def get_known_persons_stats(db: Session = Depends(get_db)):
-    """Obtiene estadísticas de las personas registradas"""
-    total = db.query(KnownPerson).count()
-    
-    # Personas que han sido detectadas al menos una vez
-    detected = db.query(KnownPerson).join(Detection).distinct().count()
-    
-    # Últimas personas registradas
-    latest = db.query(KnownPerson).order_by(KnownPerson.registered_at.desc()).limit(5).all()
-    
-    return {
-        "total": total,
-        "detected": detected,
-        "not_detected": total - detected,
-        "latest": [
-            {
-                "id": p.id,
-                "name": f"{p.name} {p.surname}",
-                "registered_at": p.registered_at.isoformat()
-            } for p in latest
-        ]
-    }
 
 @router.post("/detections", response_model=DetectionRead)
 def create_detection(payload: DetectionCreate, db: Session = Depends(get_db)):
