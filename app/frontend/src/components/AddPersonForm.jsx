@@ -20,6 +20,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { styled } from '@mui/material/styles';
 import axios from 'axios';
 
+// Input oculto accesible usado por el botón de carga de imagen.
+// Mantiene el estilo limpio y permite seleccionar un archivo desde el dispositivo.
 const VisuallyHiddenInput = styled('input')({
   clip: 'rect(0 0 0 0)',
   clipPath: 'inset(50%)',
@@ -35,7 +37,10 @@ const VisuallyHiddenInput = styled('input')({
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const AddPersonForm = () => {
+  // Paso actual del formulario escalonado.
   const [activeStep, setActiveStep] = useState(0);
+
+  // Valores del formulario que se envían al backend.
   const [formData, setFormData] = useState({
     name: '',
     surname: '',
@@ -49,6 +54,7 @@ const AddPersonForm = () => {
 
   const steps = ['Datos personales', 'Foto', 'Confirmación'];
 
+  // Actualiza el estado del formulario cuando el usuario escribe en un campo.
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -56,6 +62,7 @@ const AddPersonForm = () => {
     });
   };
 
+  // Procesa la imagen seleccionada, genera vista previa y valida el tipo de archivo.
   const handleImageCapture = (event) => {
     const file = event.target.files[0];
     if (file && file.type.startsWith('image/')) {
@@ -72,6 +79,7 @@ const AddPersonForm = () => {
     }
   };
 
+  // Valida el paso actual y avanza al siguiente paso del wizard.
   const handleNext = () => {
     if (activeStep === 0 && (!formData.name || !formData.surname)) {
       setMessage({ type: 'error', text: 'Por favor, completa nombre y apellido' });
@@ -86,10 +94,12 @@ const AddPersonForm = () => {
     setActiveStep((prevStep) => prevStep + 1);
   };
 
+  // Retrocede al paso anterior del formulario.
   const handleBack = () => {
     setActiveStep((prevStep) => prevStep - 1);
   };
 
+  // Envía los datos y la imagen al backend para crear una nueva persona registrada.
   const handleSubmit = async () => {
     if (!formData.name || !formData.surname || !image) {
       setMessage({ type: 'error', text: 'Por favor, completa todos los campos y añade una imagen' });
@@ -123,9 +133,7 @@ const AddPersonForm = () => {
         setImage(null);
         setImagePreview(null);
         setActiveStep(0);
-        
-        // Opcional: notificar al sistema que hay una nueva persona
-        // para actualizar la lista de personas conocidas
+        await fetchKnownPersons();
       } else {
         setMessage({ type: 'error', text: response.data.error || 'Error al guardar la persona' });
       }
@@ -144,6 +152,7 @@ const AddPersonForm = () => {
     }
   };
 
+  // Devuelve el contenido del paso actual del formulario escalonado.
   const getStepContent = (step) => {
     switch (step) {
       case 0:

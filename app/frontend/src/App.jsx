@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import VideoPlayer from './components/VideoPlayer';
 import AddPersonForm from './components/AddPersonForm';
 import PersonLogs from './components/PersonLogs';
+import RegisteredPersons from './components/RegisteredPersons'; // Importar el nuevo componente
 
 const theme = createTheme({
   palette: {
@@ -54,6 +55,7 @@ function App() {
             <Routes>
               <Route path="/" element={<VideoPlayer />} />
               <Route path="/add-person" element={<AddPersonForm />} />
+              <Route path="/registered-persons" element={<RegisteredPersons />} />
               <Route path="/logs" element={<PersonLogs />} />
             </Routes>
           </Layout>

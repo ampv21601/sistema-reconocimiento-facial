@@ -5,6 +5,7 @@ import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import HistoryIcon from '@mui/icons-material/History';
 import FaceIcon from '@mui/icons-material/Face';
+import PeopleIcon from '@mui/icons-material/People'; // Nuevo icono
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -14,6 +15,7 @@ const Layout = ({ children }) => {
   const navItems = [
     { path: '/', label: isMobile ? 'Video' : 'Reproductor', icon: <VideoLibraryIcon /> },
     { path: '/add-person', label: isMobile ? 'Añadir' : 'Añadir Persona', icon: <PersonAddIcon /> },
+    { path: '/registered-persons', label: isMobile ? 'Personas' : 'Personas Registradas', icon: <PeopleIcon /> }, // Nuevo
     { path: '/logs', label: isMobile ? 'Historial' : 'Historial', icon: <HistoryIcon /> },
   ];
 

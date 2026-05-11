@@ -93,6 +93,30 @@ def delete_known_person(person_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Person deleted successfully"}
 
+@router.get("/known_persons/stats")
+def get_known_persons_stats(db: Session = Depends(get_db)):
+    """Obtiene estadísticas de las personas registradas"""
+    total = db.query(KnownPerson).count()
+    
+    # Personas que han sido detectadas al menos una vez
+    detected = db.query(KnownPerson).join(Detection).distinct().count()
+    
+    # Últimas personas registradas
+    latest = db.query(KnownPerson).order_by(KnownPerson.registered_at.desc()).limit(5).all()
+    
+    return {
+        "total": total,
+        "detected": detected,
+        "not_detected": total - detected,
+        "latest": [
+            {
+                "id": p.id,
+                "name": f"{p.name} {p.surname}",
+                "registered_at": p.registered_at.isoformat()
+            } for p in latest
+        ]
+    }
+
 @router.post("/detections", response_model=DetectionRead)
 def create_detection(payload: DetectionCreate, db: Session = Depends(get_db)):
     known_persons = db.query(KnownPerson).all()
