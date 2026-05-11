@@ -1,3 +1,4 @@
+// app/frontend/src/components/AddPersonForm.jsx
 import React, { useState } from 'react';
 import {
   Card,
@@ -20,8 +21,6 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { styled } from '@mui/material/styles';
 import axios from 'axios';
 
-// Input oculto accesible usado por el botón de carga de imagen.
-// Mantiene el estilo limpio y permite seleccionar un archivo desde el dispositivo.
 const VisuallyHiddenInput = styled('input')({
   clip: 'rect(0 0 0 0)',
   clipPath: 'inset(50%)',
@@ -37,10 +36,7 @@ const VisuallyHiddenInput = styled('input')({
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const AddPersonForm = () => {
-  // Paso actual del formulario escalonado.
   const [activeStep, setActiveStep] = useState(0);
-
-  // Valores del formulario que se envían al backend.
   const [formData, setFormData] = useState({
     name: '',
     surname: '',
@@ -54,7 +50,6 @@ const AddPersonForm = () => {
 
   const steps = ['Datos personales', 'Foto', 'Confirmación'];
 
-  // Actualiza el estado del formulario cuando el usuario escribe en un campo.
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -62,7 +57,6 @@ const AddPersonForm = () => {
     });
   };
 
-  // Procesa la imagen seleccionada, genera vista previa y valida el tipo de archivo.
   const handleImageCapture = (event) => {
     const file = event.target.files[0];
     if (file && file.type.startsWith('image/')) {
@@ -79,7 +73,6 @@ const AddPersonForm = () => {
     }
   };
 
-  // Valida el paso actual y avanza al siguiente paso del wizard.
   const handleNext = () => {
     if (activeStep === 0 && (!formData.name || !formData.surname)) {
       setMessage({ type: 'error', text: 'Por favor, completa nombre y apellido' });
@@ -94,12 +87,10 @@ const AddPersonForm = () => {
     setActiveStep((prevStep) => prevStep + 1);
   };
 
-  // Retrocede al paso anterior del formulario.
   const handleBack = () => {
     setActiveStep((prevStep) => prevStep - 1);
   };
 
-  // Envía los datos y la imagen al backend para crear una nueva persona registrada.
   const handleSubmit = async () => {
     if (!formData.name || !formData.surname || !image) {
       setMessage({ type: 'error', text: 'Por favor, completa todos los campos y añade una imagen' });
@@ -120,7 +111,7 @@ const AddPersonForm = () => {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 30000, // 30 segundos para procesar la imagen
+        timeout: 30000,
       });
       
       if (response.data.success) {
@@ -128,31 +119,47 @@ const AddPersonForm = () => {
           type: 'success', 
           text: `✅ ${formData.name} ${formData.surname} añadido correctamente al sistema` 
         });
+        
         // Reset form
         setFormData({ name: '', surname: '', email: '', role: '' });
         setImage(null);
         setImagePreview(null);
         setActiveStep(0);
-        await fetchKnownPersons();
+        
+        // Opcional: limpiar el input file
+        const fileInput = document.querySelector('input[type="file"]');
+        if (fileInput) fileInput.value = '';
+        
       } else {
         setMessage({ type: 'error', text: response.data.error || 'Error al guardar la persona' });
       }
     } catch (error) {
-      console.error('Error:', error);
-      if (error.response?.status === 400) {
-        setMessage({ type: 'error', text: error.response.data.detail || 'Error en los datos enviados' });
-      } else if (error.response?.status === 500) {
-        setMessage({ type: 'error', text: 'Error del servidor. Asegúrate de que la imagen tenga un rostro visible' });
+      console.error('Error detallado:', error);
+      
+      // Verificar si el error es de red o del servidor
+      if (error.code === 'ERR_NETWORK') {
+        setMessage({ type: 'error', text: 'Error de conexión con el servidor. ¿El backend está corriendo?' });
+      } else if (error.response) {
+        // El servidor respondió con un error
+        const errorMsg = error.response.data?.detail || error.response.data?.message || 'Error del servidor';
+        setMessage({ type: 'error', text: `Error del servidor: ${errorMsg}` });
+        
+        // Si el error es 400 pero la persona se creó, mostrar mensaje diferente
+        if (error.response.status === 400 && error.response.data?.detail?.includes('already exists')) {
+          setMessage({ type: 'warning', text: 'Esta persona ya existe en el sistema' });
+        }
+      } else if (error.request) {
+        setMessage({ type: 'error', text: 'No se recibió respuesta del servidor' });
       } else {
-        setMessage({ type: 'error', text: 'Error de conexión con el servidor' });
+        setMessage({ type: 'error', text: `Error: ${error.message}` });
       }
     } finally {
       setLoading(false);
+      // Limpiar mensaje después de 5 segundos
       setTimeout(() => setMessage(null), 5000);
     }
   };
 
-  // Devuelve el contenido del paso actual del formulario escalonado.
   const getStepContent = (step) => {
     switch (step) {
       case 0:
@@ -229,7 +236,6 @@ const AddPersonForm = () => {
                 type="file"
                 accept="image/*"
                 onChange={handleImageCapture}
-                capture="environment"
               />
             </Button>
             <Typography variant="caption" color="textSecondary" sx={{ mt: 2, textAlign: 'center' }}>
@@ -269,7 +275,18 @@ const AddPersonForm = () => {
         </Typography>
 
         {message && (
-          <Alert severity={message.type} sx={{ mb: 3 }} onClose={() => setMessage(null)}>
+          <Alert 
+            severity={message.type} 
+            sx={{ mb: 3 }} 
+            onClose={() => setMessage(null)}
+            action={
+              message.type === 'success' && (
+                <Button color="inherit" size="small" onClick={() => window.location.href = '/registered-persons'}>
+                  Ver personas
+                </Button>
+              )
+            }
+          >
             {message.text}
           </Alert>
         )}
@@ -287,7 +304,7 @@ const AddPersonForm = () => {
           
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4, gap: 2 }}>
             {activeStep !== 0 && (
-              <Button onClick={handleBack}>
+              <Button onClick={handleBack} disabled={loading}>
                 Atrás
               </Button>
             )}
@@ -304,6 +321,7 @@ const AddPersonForm = () => {
               <Button
                 variant="contained"
                 onClick={handleNext}
+                disabled={loading}
               >
                 Siguiente
               </Button>
