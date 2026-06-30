@@ -2,6 +2,8 @@
 
 Esta aplicación permite detectar rostros en tiempo real desde un video subido o desde la cámara web, compararlos con personas registradas y registrar automáticamente nuevos rostros cuando no coinciden con ninguna identidad conocida. El flujo completo combina visión por computador, embeddings faciales y una interfaz web moderna para visualizar detecciones y administrar personas.
 
+![Pantalla de inicio](images/inicio.png)
+
 ## ¿Qué hace la aplicación?
 
 La solución está pensada para tres escenarios principales:
@@ -32,6 +34,8 @@ El proyecto está dividido en tres capas principales:
 - Frontend: la interfaz permite cargar un video, activar la cámara web, iniciar detección y ver los recuadros sobre los rostros.
 - Backend: expone endpoints para procesar frames, añadir personas, listar personas y consultar logs.
 - Base de datos: guarda a cada persona su vector facial y metadatos como nombre, apellido, correo o rol.
+
+![Video cargado y detección de rostros](images/video-cargado.png)
 
 ## Flujo de detección
 
@@ -150,11 +154,15 @@ La app permite administrar personas registradas desde la interfaz:
 - Eliminar personas del sistema.
 - Visualizar la foto de perfil asociada.
 
+![Personas registradas](images/personas-registradas.png)
+
 ## Historial y eventos
 
 La aplicación registra eventos de entrada y salida de personas detectadas. Se implementa una lógica de gracia de 30 segundos antes de marcar la salida, lo que evita falsos positivos por pequeños parpadeos de detección.
 
 Esto es útil para escenarios donde una persona está presente unos segundos y la detección intermitente podría marcarla como salida innecesariamente.
+
+![Historial de eventos](images/historial.png)
 
 ## Requisitos principales
 
