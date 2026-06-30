@@ -47,17 +47,24 @@ const RegisteredPersons = () => {
     loadPersons();
   }, []);
 
-  const loadPersons = async () => {
-    setLoading(true);
+  const loadPersons = async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
+
     try {
       const response = await axios.get(`${API_URL}/api/known_persons`);
-      setPersons(response.data);
+      setPersons(response.data || []);
+      return response.data || [];
     } catch (error) {
       console.error('Error loading persons:', error);
       setMessage({ type: 'error', text: 'Error al cargar las personas registradas' });
       setTimeout(() => setMessage(null), 3000);
+      return [];
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -68,22 +75,34 @@ const RegisteredPersons = () => {
 
   const handleUpdate = async () => {
     if (!editingPerson) return;
-    
+
+    const optimisticPerson = {
+      ...editingPerson,
+      person_metadata: editingPerson.person_metadata ? { ...editingPerson.person_metadata } : null,
+    };
+
+    setPersons((prev) => prev.map((person) => person.id === optimisticPerson.id ? optimisticPerson : person));
+    setOpenDialog(false);
+    setEditingPerson(null);
+
     try {
       const response = await axios.put(`${API_URL}/api/known_persons/${editingPerson.id}`, {
         name: editingPerson.name,
         surname: editingPerson.surname,
-        person_metadata: editingPerson.person_metadata
+        person_metadata: editingPerson.person_metadata,
       });
-      
+
       if (response.data) {
+        const updatedPerson = response.data.person || optimisticPerson;
+        setPersons((prev) => prev.map((person) => person.id === updatedPerson.id
+          ? { ...person, ...updatedPerson, person_metadata: updatedPerson.person_metadata ?? person.person_metadata }
+          : person));
         setMessage({ type: 'success', text: 'Persona actualizada correctamente' });
-        loadPersons();
-        setOpenDialog(false);
-        setEditingPerson(null);
+        await loadPersons(false);
       }
     } catch (error) {
       console.error('Error updating person:', error);
+      setPersons((prev) => prev.map((person) => person.id === optimisticPerson.id ? { ...person, ...editingPerson, person_metadata: editingPerson.person_metadata ?? null } : person));
       setMessage({ type: 'error', text: 'Error al actualizar la persona' });
     } finally {
       setTimeout(() => setMessage(null), 3000);

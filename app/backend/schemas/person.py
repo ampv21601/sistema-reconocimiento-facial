@@ -14,6 +14,12 @@ class KnownPersonCreate(KnownPersonBase):
     pass
 
 
+class KnownPersonUpdate(BaseModel):
+    name: Optional[str] = None
+    surname: Optional[str] = None
+    person_metadata: Optional[Dict[str, Any]] = None
+
+
 class KnownPersonRead(KnownPersonBase):
     id: int
     registered_at: datetime

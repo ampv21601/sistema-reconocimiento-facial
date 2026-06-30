@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -11,6 +13,7 @@ from app.backend.schemas.person import (
     DetectionRead,
     KnownPersonCreate,
     KnownPersonRead,
+    KnownPersonUpdate,
 )
 from app.backend.services.face_recognition import match_known_person
 
@@ -79,28 +82,41 @@ def get_known_person(person_id: int, db: Session = Depends(get_db)):
     return person
 
 
+def _serialize_known_person(person: KnownPerson) -> dict:
+    return {
+        "id": person.id,
+        "name": person.name,
+        "surname": person.surname,
+        "vector": person.vector.tolist() if hasattr(person.vector, "tolist") else person.vector,
+        "person_metadata": person.person_metadata,
+        "registered_at": person.registered_at,
+    }
+
+
 @router.put("/known_persons/{person_id}")
 def update_known_person(
     person_id: int,
-    name: Optional[str] = None,
-    surname: Optional[str] = None,
-    metadata: Optional[dict] = None,
+    payload: KnownPersonUpdate,
     db: Session = Depends(get_db)
 ):
     person = db.query(KnownPerson).filter(KnownPerson.id == person_id).first()
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
-    
-    if name:
-        person.name = name
-    if surname:
-        person.surname = surname
-    if metadata:
-        person.person_metadata = metadata
-    
+
+    if payload.name is not None:
+        person.name = payload.name
+    if payload.surname is not None:
+        person.surname = payload.surname
+    if payload.person_metadata is not None:
+        person.person_metadata = payload.person_metadata
+
     db.commit()
     db.refresh(person)
-    return {"message": "Person updated successfully", "person": person}
+
+    return JSONResponse(content=jsonable_encoder({
+        "message": "Person updated successfully",
+        "person": _serialize_known_person(person),
+    }))
 
 
 @router.delete("/known_persons/{person_id}")

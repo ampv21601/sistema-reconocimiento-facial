@@ -26,6 +26,31 @@ def _encode_frame_to_base64(frame) -> str | None:
         return None
 
 
+def _encode_face_crop_to_base64(frame, face_location, size: int = 256) -> str | None:
+    """Recorta el rostro detectado y lo convierte a base64 para guardarlo como foto de perfil."""
+    try:
+        top, right, bottom, left = face_location
+        margin_y = max(8, int((bottom - top) * 0.15))
+        margin_x = max(8, int((right - left) * 0.15))
+
+        top = max(0, top - margin_y)
+        right = min(frame.shape[1] - 1, right + margin_x)
+        bottom = min(frame.shape[0] - 1, bottom + margin_y)
+        left = max(0, left - margin_x)
+
+        face_crop = frame[top:bottom, left:right]
+        if face_crop.size == 0:
+            face_crop = frame
+
+        face_crop = cv2.resize(face_crop, (size, size), interpolation=cv2.INTER_AREA)
+        _, buffer = cv2.imencode('.jpg', face_crop)
+        if buffer is None:
+            return None
+        return base64.b64encode(buffer).decode('utf-8')
+    except Exception:
+        return None
+
+
 def _recognize_face(face_location, rgb_frame, known_persons, threshold):
     """Reconoce un rostro concreto de forma independiente."""
     try:
@@ -120,13 +145,16 @@ async def detect_frame(image: str = Form(...), db: Session = Depends(get_db)):
                 executor.submit(_recognize_face, face_location, rgb_frame, known_persons, threshold)
                 for face_location in face_locations
             ]
-            for future in futures:
+            for face_location, future in zip(face_locations, futures):
                 result = future.result()
                 if result is None:
                     continue
 
                 if not result["recognized"]:
-                    profile_photo = _encode_frame_to_base64(frame)
+                    profile_photo = _encode_face_crop_to_base64(frame, face_location)
+                    if profile_photo is None:
+                        profile_photo = _encode_frame_to_base64(frame)
+
                     new_person = KnownPerson(
                         name=_get_next_user_name(db),
                         surname="",
@@ -223,7 +251,11 @@ async def add_person(
         if existing:
             raise HTTPException(status_code=400, detail="Person already exists")
 
-        profile_photo = _encode_frame_to_base64(img)
+        face_location = face_locations[0]
+        profile_photo = _encode_face_crop_to_base64(img, face_location)
+        if profile_photo is None:
+            profile_photo = _encode_frame_to_base64(img)
+
         person = KnownPerson(
             name=name,
             surname=surname,
