@@ -332,13 +332,13 @@ const VideoPlayer = () => {
                       >
                         <StopIcon />
                       </Fab>
-                      <Fab
+                      {/* <Fab
                         color="primary"
                         onClick={captureScreenshot}
                         size="small"
                       >
                         <ScreenshotMonitorIcon />
-                      </Fab>
+                      </Fab> */}
                     </ControlBar>
                   </>
                 )}
@@ -399,14 +399,14 @@ const VideoPlayer = () => {
                 </Grow>
               )}
 
-              {screenshot && (
+              {/* {screenshot && (
                 <Box sx={{ mt: 3 }}>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
                     Última Captura
                   </Typography>
                   <img src={screenshot} alt="Screenshot" style={{ width: '100%', borderRadius: 8 }} />
                 </Box>
-              )}
+              )} */}
             </CardContent>
           </Card>
         </Grid>
