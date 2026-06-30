@@ -43,6 +43,7 @@ export const VideoProvider = ({ children }) => {
   const detectionInterval = useRef(null);
   const activePersonsRef = useRef(new Map());
   const detectionInFlightRef = useRef(false);
+  const EXIT_GRACE_PERIOD_MS = 30_000;
 
   // Función para capturar frame del video
   const captureFrame = () => {
@@ -105,7 +106,8 @@ export const VideoProvider = ({ children }) => {
       const detections = Array.isArray(response.data.detections) ? response.data.detections : (response.data.detected ? [response.data] : []);
 
       if (detections.length > 0) {
-        const now = new Date().toISOString();
+        const nowMs = Date.now();
+        const now = new Date(nowMs).toISOString();
         const existingLogs = JSON.parse(localStorage.getItem('detectionLogs') || '[]');
         const nextLogs = [...existingLogs];
         const currentActive = new Map(activePersonsRef.current);
@@ -126,22 +128,26 @@ export const VideoProvider = ({ children }) => {
               confidence: detectionItem.confidence || 0,
             };
             nextLogs.unshift(newLog);
-            currentActive.set(personKey, { name: personName, timestamp: now });
           }
+
+          currentActive.set(personKey, { name: personName, lastSeenAt: nowMs });
         });
 
         for (const [personKey, value] of currentActive.entries()) {
           if (!seenKeys.has(personKey)) {
-            const exitLog = {
-              id: Date.now() + Math.random(),
-              name: value.name,
-              timestamp: now,
-              eventType: 'salida',
-              status: 'salida',
-              confidence: 0,
-            };
-            nextLogs.unshift(exitLog);
-            currentActive.delete(personKey);
+            const timeSinceLastSeen = nowMs - (value.lastSeenAt || nowMs);
+            if (timeSinceLastSeen >= EXIT_GRACE_PERIOD_MS) {
+              const exitLog = {
+                id: Date.now() + Math.random(),
+                name: value.name,
+                timestamp: now,
+                eventType: 'salida',
+                status: 'salida',
+                confidence: 0,
+              };
+              nextLogs.unshift(exitLog);
+              currentActive.delete(personKey);
+            }
           }
         }
 
@@ -153,33 +159,38 @@ export const VideoProvider = ({ children }) => {
         setDetectedPerson(overlayNames);
         setDetectionConfidence(detections[0]?.confidence || 0);
         
-        setMessage({ 
-          type: detections.some((item) => item.recognized) ? 'success' : 'warning', 
-          text: `✅ ${overlayNames}`
-        });
+        // setMessage({ 
+        //   type: detections.some((item) => item.recognized) ? 'success' : 'warning', 
+        //   text: `✅ ${overlayNames}`
+        // });
       } else {
         const currentActive = new Map(activePersonsRef.current);
         const nextLogs = [...JSON.parse(localStorage.getItem('detectionLogs') || '[]')];
-        const now = new Date().toISOString();
+        const nowMs = Date.now();
+        const now = new Date(nowMs).toISOString();
 
         for (const [personKey, value] of currentActive.entries()) {
-          nextLogs.unshift({
-            id: Date.now() + Math.random(),
-            name: value.name,
-            timestamp: now,
-            eventType: 'salida',
-            status: 'salida',
-            confidence: 0,
-          });
+          const timeSinceLastSeen = nowMs - (value.lastSeenAt || nowMs);
+          if (timeSinceLastSeen >= EXIT_GRACE_PERIOD_MS) {
+            nextLogs.unshift({
+              id: Date.now() + Math.random(),
+              name: value.name,
+              timestamp: now,
+              eventType: 'salida',
+              status: 'salida',
+              confidence: 0,
+            });
+            currentActive.delete(personKey);
+          }
         }
 
-        activePersonsRef.current = new Map();
+        activePersonsRef.current = currentActive;
         localStorage.setItem('detectionLogs', JSON.stringify(nextLogs.slice(0, 100)));
 
         setDetection('red');
         setDetectedPerson(null);
         setDetectionConfidence(0);
-        setMessage({ type: 'error', text: '❌ No se detectaron rostros' });
+        // setMessage({ type: 'error', text: '❌ No se detectaron rostros' });
       }
       
       setTimeout(() => setMessage(null), 2000);
