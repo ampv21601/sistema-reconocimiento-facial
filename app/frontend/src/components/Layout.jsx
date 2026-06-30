@@ -22,7 +22,7 @@ const Layout = ({ children }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
       <AppBar position="sticky" elevation={0} sx={{ 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #667eea 0%, #667eea 100%)',
         borderBottom: '1px solid rgba(255,255,255,0.1)'
       }}>
         <Toolbar>

@@ -12,7 +12,7 @@ from app.backend.schemas.person import (
     KnownPersonCreate,
     KnownPersonRead,
 )
-from app.backend.services.face_recognition import match_known_person, vector_distance
+from app.backend.services.face_recognition import match_known_person
 
 router = APIRouter()
 
