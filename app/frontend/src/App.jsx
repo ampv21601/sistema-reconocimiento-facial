@@ -7,18 +7,19 @@ import Layout from './components/Layout';
 import VideoPlayer from './components/VideoPlayer';
 import AddPersonForm from './components/AddPersonForm';
 import PersonLogs from './components/PersonLogs';
-import RegisteredPersons from './components/RegisteredPersons'; // Importar el nuevo componente
+import RegisteredPersons from './components/RegisteredPersons';
+import { appColors } from './theme/colors';
 
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#667eea',
+      main: appColors.primary,
     },
     secondary: {
-      main: '#764ba2',
+      main: appColors.secondary,
     },
     background: {
-      default: '#f5f5f5',
+      default: appColors.background,
     },
   },
   shape: {

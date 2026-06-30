@@ -31,6 +31,7 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import EmailIcon from '@mui/icons-material/Email';
 import WorkIcon from '@mui/icons-material/Work';
 import axios from 'axios';
+import { appColors, appGradients } from '../theme/colors';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -134,7 +135,7 @@ const RegisteredPersons = () => {
       )}
 
       {/* Estadísticas */}
-      <Card sx={{ mb: 4, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+      <Card sx={{ mb: 4, background: appGradients.primary, color: appColors.white }}>
         <CardContent>
           <Typography variant="h4" gutterBottom fontWeight="bold">
             Personas Registradas
@@ -159,7 +160,7 @@ const RegisteredPersons = () => {
                     sx={{
                       width: 60,
                       height: 60,
-                      bgcolor: '#667eea',
+                      bgcolor: appColors.primary,
                       fontSize: '1.5rem'
                     }}
                   >
@@ -201,7 +202,7 @@ const RegisteredPersons = () => {
                   </Box>
                 )}
 
-                <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+                <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${appColors.border}` }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <CalendarTodayIcon fontSize="small" color="action" />
                     <Typography variant="caption" color="textSecondary">

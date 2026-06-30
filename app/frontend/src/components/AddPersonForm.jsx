@@ -20,6 +20,7 @@ import AddAPhotoIcon from '@mui/icons-material/AddAPhoto';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { styled } from '@mui/material/styles';
 import axios from 'axios';
+import { appColors } from '../theme/colors';
 
 const VisuallyHiddenInput = styled('input')({
   clip: 'rect(0 0 0 0)',
@@ -219,7 +220,7 @@ const AddPersonForm = () => {
                 width: 250,
                 height: 250,
                 mb: 3,
-                border: '3px solid #1976d2',
+                border: `3px solid ${appColors.accentBlue}`,
               }}
             >
               {!imagePreview && <AddAPhotoIcon sx={{ fontSize: 80 }} />}

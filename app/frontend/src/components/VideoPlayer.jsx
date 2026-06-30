@@ -29,6 +29,7 @@ import ScreenshotMonitorIcon from '@mui/icons-material/ScreenshotMonitor';
 import Webcam from 'react-webcam';
 import { styled } from '@mui/material/styles';
 import { useVideo } from '../context/VideoContext';
+import { appColors, appGradients } from '../theme/colors';
 
 const DetectionOverlay = styled(Box)(({ theme, detection }) => ({
   position: 'absolute',
@@ -36,7 +37,7 @@ const DetectionOverlay = styled(Box)(({ theme, detection }) => ({
   left: 20,
   padding: '12px 24px',
   borderRadius: 30,
-  backgroundColor: detection === 'green' ? '#4caf50' : detection === 'red' ? '#f44336' : '#9e9e9e',
+  backgroundColor: detection === 'green' ? appColors.success : detection === 'red' ? appColors.error : appColors.neutral,
   color: 'white',
   fontWeight: 'bold',
   zIndex: 10,
@@ -50,7 +51,7 @@ const VideoContainer = styled(Paper)(({ theme }) => ({
   position: 'relative',
   overflow: 'hidden',
   borderRadius: 16,
-  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  background: appGradients.primary,
   padding: 4,
   transition: 'all 0.3s ease',
   '&:hover': {
@@ -67,7 +68,7 @@ const ControlBar = styled(Box)(({ theme }) => ({
   display: 'flex',
   gap: 12,
   zIndex: 20,
-  background: 'rgba(0,0,0,0.7)',
+  background: appColors.overlayDark,
   backdropFilter: 'blur(10px)',
   padding: '8px 16px',
   borderRadius: 40,
@@ -140,7 +141,7 @@ const VideoPlayer = () => {
         {/* Control Panel */}
         <Grid item xs={12}>
           <Card sx={{ 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: appGradients.primary,
             color: 'white',
             mb: 3
           }}>
@@ -157,13 +158,13 @@ const VideoPlayer = () => {
                 exclusive
                 onChange={(e, val) => handleSourceChange(val)}
                 sx={{ 
-                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  backgroundColor: appColors.overlayLight,
                   borderRadius: 2,
                   '& .MuiToggleButton-root': {
                     color: 'white',
                     '&.Mui-selected': {
                       backgroundColor: 'white',
-                      color: '#667eea',
+                      color: appColors.primary,
                     }
                   }
                 }}
@@ -279,8 +280,8 @@ const VideoPlayer = () => {
                         px: 4,
                         py: 2,
                         fontSize: '1.1rem',
-                        backgroundColor: '#4caf50',
-                        '&:hover': { backgroundColor: '#45a049' }
+                        backgroundColor: appColors.success,
+                        '&:hover': { backgroundColor: appColors.successHover }
                       }}
                     >
                       Activar Cámara Web
@@ -379,9 +380,9 @@ const VideoPlayer = () => {
                 <Grow in={true}>
                   <Box sx={{ 
                     p: 2, 
-                    bgcolor: '#e8f5e9', 
+                    bgcolor: appColors.successLight,
                     borderRadius: 2,
-                    border: '1px solid #4caf50',
+                    border: `1px solid ${appColors.success}`,
                     mb: 2
                   }}>
                     <Typography variant="body2" color="success.main" gutterBottom>

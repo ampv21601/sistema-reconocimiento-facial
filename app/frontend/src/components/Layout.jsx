@@ -5,7 +5,8 @@ import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import HistoryIcon from '@mui/icons-material/History';
 import FaceIcon from '@mui/icons-material/Face';
-import PeopleIcon from '@mui/icons-material/People'; // Nuevo icono
+import PeopleIcon from '@mui/icons-material/People';
+import { appColors, appGradients } from '../theme/colors';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -20,13 +21,13 @@ const Layout = ({ children }) => {
   ];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
-      <AppBar position="sticky" elevation={0} sx={{ 
-        background: 'linear-gradient(135deg, #667eea 0%, #667eea 100%)',
-        borderBottom: '1px solid rgba(255,255,255,0.1)'
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: appColors.background }}>
+      <AppBar position="sticky" elevation={0} sx={{
+        background: appGradients.primary,
+        borderBottom: `1px solid ${appColors.borderLight}`
       }}>
         <Toolbar>
-          <Avatar sx={{ mr: 2, bgcolor: 'rgba(255,255,255,0.2)' }}>
+          <Avatar sx={{ mr: 2, bgcolor: appColors.overlayLight }}>
             <FaceIcon />
           </Avatar>
           <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ flexGrow: 1, fontWeight: 'bold' }}>
@@ -44,9 +45,9 @@ const Layout = ({ children }) => {
                 px: isMobile ? 1 : 2,
                 py: isMobile ? 0.5 : 1,
                 borderRadius: 2,
-                backgroundColor: location.pathname === item.path ? 'rgba(255,255,255,0.2)' : 'transparent',
+                backgroundColor: location.pathname === item.path ? appColors.overlayLight : 'transparent',
                 '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  backgroundColor: appColors.overlayLightHover,
                 },
               }}
             >

@@ -24,6 +24,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
+import { appColors } from '../theme/colors';
 
 const PersonLogs = () => {
   const [logs, setLogs] = useState([]);
@@ -137,9 +138,9 @@ const PersonLogs = () => {
           }}
         />
 
-        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
+        <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${appColors.border}` }}>
           <Table>
-            <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+            <TableHead sx={{ backgroundColor: appColors.background }}>
               <TableRow>
                 <TableCell>Persona</TableCell>
                 <TableCell>Fecha y Hora</TableCell>
