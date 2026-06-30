@@ -15,6 +15,17 @@ from app.backend.models.person import Detection, KnownPerson
 from app.backend.services.face_recognition import vector_distance
 
 
+def _encode_frame_to_base64(frame) -> str | None:
+    """Convierte un frame de imagen a base64 para guardarlo como foto de perfil."""
+    try:
+        _, buffer = cv2.imencode('.jpg', frame)
+        if buffer is None:
+            return None
+        return base64.b64encode(buffer).decode('utf-8')
+    except Exception:
+        return None
+
+
 def _recognize_face(face_location, rgb_frame, known_persons, threshold):
     """Reconoce un rostro concreto de forma independiente."""
     try:
@@ -42,6 +53,12 @@ def _recognize_face(face_location, rgb_frame, known_persons, threshold):
         "person_id": best_match.id if recognized else None,
         "person_name": f"{best_match.name} {best_match.surname}" if recognized else "Persona no registrada",
         "confidence": round((1 - best_distance) * 100, 2) if best_match else 0,
+        "face_box": {
+            "top": int(face_location[0]),
+            "right": int(face_location[1]),
+            "bottom": int(face_location[2]),
+            "left": int(face_location[3]),
+        },
     }
 
 
@@ -100,6 +117,7 @@ async def detect_frame(image: str = Form(...), db: Session = Depends(get_db)):
                     continue
 
                 if not result["recognized"]:
+                    profile_photo = _encode_frame_to_base64(frame)
                     new_person = KnownPerson(
                         name=_get_next_user_name(db),
                         surname="",
@@ -107,6 +125,8 @@ async def detect_frame(image: str = Form(...), db: Session = Depends(get_db)):
                         person_metadata={
                             "registered_at": datetime.now().isoformat(),
                             "auto_registered": True,
+                            "profile_photo": profile_photo,
+                            "profile_photo_format": "jpeg",
                         }
                     )
                     db.add(new_person)
@@ -194,6 +214,7 @@ async def add_person(
         if existing:
             raise HTTPException(status_code=400, detail="Person already exists")
 
+        profile_photo = _encode_frame_to_base64(img)
         person = KnownPerson(
             name=name,
             surname=surname,
@@ -201,7 +222,9 @@ async def add_person(
             person_metadata={
                 "email": email,
                 "role": role,
-                "registered_at": datetime.now().isoformat()
+                "registered_at": datetime.now().isoformat(),
+                "profile_photo": profile_photo,
+                "profile_photo_format": "jpeg",
             }
         )
         db.add(person)

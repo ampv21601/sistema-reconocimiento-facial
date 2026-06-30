@@ -117,6 +117,13 @@ const RegisteredPersons = () => {
     return `${name.charAt(0)}${surname.charAt(0)}`.toUpperCase();
   };
 
+  const getProfilePhotoUrl = (person) => {
+    const profilePhoto = person?.person_metadata?.profile_photo;
+    if (!profilePhoto) return null;
+    if (profilePhoto.startsWith('data:image')) return profilePhoto;
+    return `data:image/jpeg;base64,${profilePhoto}`;
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -157,6 +164,7 @@ const RegisteredPersons = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                   <Avatar
+                    src={getProfilePhotoUrl(person)}
                     sx={{
                       width: 60,
                       height: 60,
