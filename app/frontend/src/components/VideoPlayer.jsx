@@ -24,7 +24,6 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import StopIcon from '@mui/icons-material/Stop';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import ScreenshotMonitorIcon from '@mui/icons-material/ScreenshotMonitor';
 import Webcam from 'react-webcam';
 import { styled } from '@mui/material/styles';
@@ -108,13 +107,6 @@ const VideoPlayer = () => {
     }
   };
 
-  const toggleFullscreen = () => {
-    const elem = document.getElementById('video-container');
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen();
-    }
-  };
-
   const handleVideoPlaybackChange = (nextState) => {
     setIsPlaying(nextState);
   };
@@ -190,12 +182,15 @@ const VideoPlayer = () => {
           <VideoContainer elevation={3} id="video-container">
             {sourceType === 'upload' && !videoUrl && (
               <Box sx={{ 
-                minHeight: 400, 
-                display: 'flex', 
-                alignItems: 'center', 
+                minHeight: 430,
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 flexDirection: 'column',
-                p: 4
+                p: 4,
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05))',
+                borderRadius: 3,
+                border: `1px solid ${appColors.white}22`,
               }}>
                 <input
                   type="file"
@@ -204,6 +199,15 @@ const VideoPlayer = () => {
                   ref={fileInputRef}
                   onChange={onVideoUpload}
                 />
+                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 72, height: 72, borderRadius: '50%', backgroundColor: appColors.white, color: appColors.primary }}>
+                  <CloudUploadIcon sx={{ fontSize: 36 }} />
+                </Box>
+                <Typography variant="h5" fontWeight="bold" color="white" sx={{ mb: 1 }}>
+                  Sube un vídeo para empezar
+                </Typography>
+                <Typography sx={{ mb: 3, color: 'rgba(255,255,255,0.9)', textAlign: 'center', maxWidth: 480 }}>
+                  El sistema analizará el contenido y mostrará las detecciones en tiempo real cuando el vídeo se reproduzca.
+                </Typography>
                 <Button
                   variant="contained"
                   size="large"
@@ -212,13 +216,16 @@ const VideoPlayer = () => {
                   sx={{ 
                     borderRadius: 3,
                     px: 4,
-                    py: 2,
-                    fontSize: '1.1rem'
+                    py: 1.5,
+                    fontSize: '1.05rem',
+                    backgroundColor: appColors.white,
+                    color: appColors.primary,
+                    '&:hover': { backgroundColor: appColors.overlayLight, color: 'white' }
                   }}
                 >
                   Seleccionar Video
                 </Button>
-                <Typography sx={{ mt: 2, color: 'text.secondary' }}>
+                <Typography sx={{ mt: 2, color: 'rgba(255,255,255,0.8)' }}>
                   Formatos soportados: MP4, AVI, MOV
                 </Typography>
               </Box>
@@ -239,10 +246,15 @@ const VideoPlayer = () => {
                 <video
                   ref={videoRef}
                   src={videoUrl}
-                  style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 500 }}
+                  style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 500, backgroundColor: '#000' }}
                   onPlay={() => handleVideoPlaybackChange(true)}
                   onPause={() => handleVideoPlaybackChange(false)}
                   onEnded={() => handleVideoPlaybackChange(false)}
+                  onLoadedMetadata={() => {
+                    if (videoRef.current && videoRef.current.currentTime < 0.5) {
+                      videoRef.current.currentTime = 0;
+                    }
+                  }}
                   controls
                 />
                 
@@ -253,13 +265,6 @@ const VideoPlayer = () => {
                     size="small"
                   >
                     {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
-                  </Fab>
-                  <Fab
-                    color="secondary"
-                    onClick={toggleFullscreen}
-                    size="small"
-                  >
-                    <FullscreenIcon />
                   </Fab>
                 </ControlBar>
               </Box>
@@ -333,13 +338,6 @@ const VideoPlayer = () => {
                         size="small"
                       >
                         <ScreenshotMonitorIcon />
-                      </Fab>
-                      <Fab
-                        color="info"
-                        onClick={toggleFullscreen}
-                        size="small"
-                      >
-                        <FullscreenIcon />
                       </Fab>
                     </ControlBar>
                   </>

@@ -20,10 +20,7 @@ export const VideoProvider = ({ children }) => {
     return saved || 'upload';
   });
   
-  const [videoUrl, setVideoUrl] = useState(() => {
-    const saved = localStorage.getItem('videoUrl');
-    return saved || null;
-  });
+  const [videoUrl, setVideoUrlState] = useState(null);
   
   const [videoFile, setVideoFile] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -44,6 +41,15 @@ export const VideoProvider = ({ children }) => {
   const activePersonsRef = useRef(new Map());
   const detectionInFlightRef = useRef(false);
   const EXIT_GRACE_PERIOD_MS = 30_000;
+
+  const setVideoUrl = (nextUrl) => {
+    setVideoUrlState(nextUrl);
+    if (nextUrl) {
+      localStorage.setItem('videoUrl', nextUrl);
+    } else {
+      localStorage.removeItem('videoUrl');
+    }
+  };
 
   // Función para capturar frame del video
   const captureFrame = () => {
