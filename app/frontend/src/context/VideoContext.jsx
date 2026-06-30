@@ -42,6 +42,7 @@ export const VideoProvider = ({ children }) => {
   const webcamRef = useRef(null);
   const detectionInterval = useRef(null);
   const activePersonsRef = useRef(new Map());
+  const detectionInFlightRef = useRef(false);
 
   // Función para capturar frame del video
   const captureFrame = () => {
@@ -54,25 +55,40 @@ export const VideoProvider = ({ children }) => {
     }
     
     if (source) {
+      const maxWidth = 640;
+      let width = source.videoWidth || 640;
+      let height = source.videoHeight || 480;
+
+      if (width > maxWidth) {
+        const scale = maxWidth / width;
+        width = Math.floor(width * scale);
+        height = Math.floor(height * scale);
+      }
+
       const canvas = document.createElement('canvas');
-      canvas.width = source.videoWidth;
-      canvas.height = source.videoHeight;
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL('image/jpeg', 0.8);
+      return canvas.toDataURL('image/jpeg', 0.7);
     }
     return null;
   };
 
   // Función para enviar frame al backend y detectar
   const sendFrameForDetection = async () => {
-    if ((sourceType === 'upload' && !isPlaying) || (sourceType === 'webcam' && !webcamEnabled)) {
+    if (detectionInFlightRef.current) {
+      return;
+    }
+
+    if ((sourceType === 'upload' && (!isPlaying || !videoUrl)) || (sourceType === 'webcam' && !webcamEnabled)) {
       return;
     }
     
     const frameData = captureFrame();
     if (!frameData) return;
     
+    detectionInFlightRef.current = true;
     setIsDetecting(true);
     
     try {
@@ -83,7 +99,7 @@ export const VideoProvider = ({ children }) => {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 10000,
+        timeout: 30000,
       });
       
       const detections = Array.isArray(response.data.detections) ? response.data.detections : (response.data.detected ? [response.data] : []);
@@ -174,6 +190,7 @@ export const VideoProvider = ({ children }) => {
       setMessage({ type: 'error', text: 'Error de conexión con el servidor' });
       setTimeout(() => setMessage(null), 2000);
     } finally {
+      detectionInFlightRef.current = false;
       setIsDetecting(false);
     }
   };
@@ -185,7 +202,9 @@ export const VideoProvider = ({ children }) => {
       if (detectionInterval.current) {
         clearInterval(detectionInterval.current);
       }
-      detectionInterval.current = setInterval(sendFrameForDetection, 2000);
+      detectionInterval.current = setInterval(() => {
+        void sendFrameForDetection();
+      }, 4000);
     } else if (detectionInterval.current) {
       clearInterval(detectionInterval.current);
     }

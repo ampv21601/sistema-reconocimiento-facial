@@ -91,8 +91,17 @@ async def detect_frame(image: str = Form(...), db: Session = Depends(get_db)):
         if frame is None:
             raise HTTPException(status_code=400, detail="Invalid image data")
 
+        max_width = 720
+        if frame.shape[1] > max_width:
+            scale = max_width / frame.shape[1]
+            frame = cv2.resize(
+                frame,
+                (int(frame.shape[1] * scale), int(frame.shape[0] * scale)),
+                interpolation=cv2.INTER_AREA,
+            )
+
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        face_locations = face_recognition.face_locations(rgb_frame)
+        face_locations = face_recognition.face_locations(rgb_frame, model="hog")
 
         if not face_locations:
             return JSONResponse(content={

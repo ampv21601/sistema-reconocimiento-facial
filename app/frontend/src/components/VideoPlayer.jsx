@@ -96,6 +96,7 @@ const VideoPlayer = () => {
     handleSourceChange,
     setMessage,
     detectionConfidence,
+    setIsPlaying,
   } = useVideo();
 
   const fileInputRef = React.useRef(null);
@@ -112,6 +113,10 @@ const VideoPlayer = () => {
     if (elem.requestFullscreen) {
       elem.requestFullscreen();
     }
+  };
+
+  const handleVideoPlaybackChange = (nextState) => {
+    setIsPlaying(nextState);
   };
 
   // Restaurar tiempo del video si es necesario
@@ -235,8 +240,9 @@ const VideoPlayer = () => {
                   ref={videoRef}
                   src={videoUrl}
                   style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 500 }}
-                  onPlay={() => console.log('Video playing')}
-                  onPause={() => console.log('Video paused')}
+                  onPlay={() => handleVideoPlaybackChange(true)}
+                  onPause={() => handleVideoPlaybackChange(false)}
+                  onEnded={() => handleVideoPlaybackChange(false)}
                   controls
                 />
                 
