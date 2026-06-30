@@ -49,8 +49,17 @@ const PersonLogs = () => {
     setFilteredLogs(filtered);
   }, [searchTerm, logs]);
 
-  const getStatusChip = (status) => {
-    if (status === 'reconocido') {
+  const getStatusChip = (log) => {
+    if (log.eventType === 'salida') {
+      return <Chip icon={<PersonIcon />} label="Salida" color="default" size="small" />;
+    }
+    if (log.eventType === 'entrada') {
+      if (log.status === 'reconocido') {
+        return <Chip icon={<CheckCircleIcon />} label="Entrada reconocida" color="success" size="small" />;
+      }
+      return <Chip icon={<PersonIcon />} label="Entrada no reconocida" color="warning" size="small" />;
+    }
+    if (log.status === 'reconocido') {
       return <Chip icon={<CheckCircleIcon />} label="Reconocido" color="success" size="small" />;
     }
     return <Chip icon={<PersonIcon />} label="No reconocido" color="warning" size="small" />;
@@ -155,7 +164,7 @@ const PersonLogs = () => {
                       <Typography variant="body2">{formatDate(log.timestamp)}</Typography>
                     </Box>
                   </TableCell>
-                  <TableCell>{getStatusChip(log.status)}</TableCell>
+                  <TableCell>{getStatusChip(log)}</TableCell>
                   <TableCell>
                     <Typography variant="body2">
                       {log.confidence}%

@@ -371,7 +371,7 @@ const VideoPlayer = () => {
                     color={detection === 'green' ? 'success' : detection === 'red' ? 'error' : 'default'}
                     sx={{ flex: 1, py: 2 }}
                   />
-                  {isDetecting && <CircularProgress size={24} />}
+                  {/* {isDetecting && <CircularProgress size={24} />} */}
                 </Box>
               </Box>
 

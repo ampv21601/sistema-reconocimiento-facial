@@ -41,6 +41,7 @@ export const VideoProvider = ({ children }) => {
   const videoRef = useRef(null);
   const webcamRef = useRef(null);
   const detectionInterval = useRef(null);
+  const activePersonsRef = useRef(new Map());
 
   // Función para capturar frame del video
   const captureFrame = () => {
@@ -85,30 +86,83 @@ export const VideoProvider = ({ children }) => {
         timeout: 10000,
       });
       
-      if (response.data.detected) {
-        setDetection('green');
-        setDetectedPerson(response.data.person_name);
-        setDetectionConfidence(response.data.confidence || 0); // ← AÑADIR ESTA LÍNEA
-        
-        const newLog = {
-          id: Date.now(),
-          name: response.data.person_name,
-          timestamp: new Date().toISOString(),
-          status: response.data.person_name !== 'Persona no registrada' ? 'reconocido' : 'no reconocido',
-          confidence: response.data.confidence || 0
-        };
-        
+      const detections = Array.isArray(response.data.detections) ? response.data.detections : (response.data.detected ? [response.data] : []);
+
+      if (detections.length > 0) {
+        const now = new Date().toISOString();
         const existingLogs = JSON.parse(localStorage.getItem('detectionLogs') || '[]');
-        localStorage.setItem('detectionLogs', JSON.stringify([newLog, ...existingLogs].slice(0, 100)));
+        const nextLogs = [...existingLogs];
+        const currentActive = new Map(activePersonsRef.current);
+        const seenKeys = new Set();
+
+        detections.forEach((detectionItem) => {
+          const personName = detectionItem.person_name || 'Persona no registrada';
+          const personKey = detectionItem.person_id ? `person:${detectionItem.person_id}` : `name:${personName}`;
+          seenKeys.add(personKey);
+
+          if (!currentActive.has(personKey)) {
+            const newLog = {
+              id: Date.now() + Math.random(),
+              name: personName,
+              timestamp: now,
+              eventType: 'entrada',
+              status: detectionItem.recognized ? 'reconocido' : 'no reconocido',
+              confidence: detectionItem.confidence || 0,
+            };
+            nextLogs.unshift(newLog);
+            currentActive.set(personKey, { name: personName, timestamp: now });
+          }
+        });
+
+        for (const [personKey, value] of currentActive.entries()) {
+          if (!seenKeys.has(personKey)) {
+            const exitLog = {
+              id: Date.now() + Math.random(),
+              name: value.name,
+              timestamp: now,
+              eventType: 'salida',
+              status: 'salida',
+              confidence: 0,
+            };
+            nextLogs.unshift(exitLog);
+            currentActive.delete(personKey);
+          }
+        }
+
+        activePersonsRef.current = currentActive;
+        localStorage.setItem('detectionLogs', JSON.stringify(nextLogs.slice(0, 100)));
+
+        const overlayNames = detections.map((item) => item.person_name || 'Persona no registrada').join(', ');
+        setDetection('green');
+        setDetectedPerson(overlayNames);
+        setDetectionConfidence(detections[0]?.confidence || 0);
         
         setMessage({ 
-          type: response.data.person_name !== 'Persona no registrada' ? 'success' : 'warning', 
-          text: `✅ ${response.data.person_name} (${response.data.confidence}% confianza)`
+          type: detections.some((item) => item.recognized) ? 'success' : 'warning', 
+          text: `✅ ${overlayNames}`
         });
       } else {
+        const currentActive = new Map(activePersonsRef.current);
+        const nextLogs = [...JSON.parse(localStorage.getItem('detectionLogs') || '[]')];
+        const now = new Date().toISOString();
+
+        for (const [personKey, value] of currentActive.entries()) {
+          nextLogs.unshift({
+            id: Date.now() + Math.random(),
+            name: value.name,
+            timestamp: now,
+            eventType: 'salida',
+            status: 'salida',
+            confidence: 0,
+          });
+        }
+
+        activePersonsRef.current = new Map();
+        localStorage.setItem('detectionLogs', JSON.stringify(nextLogs.slice(0, 100)));
+
         setDetection('red');
         setDetectedPerson(null);
-        setDetectionConfidence(0); // ← AÑADIR ESTA LÍNEA
+        setDetectionConfidence(0);
         setMessage({ type: 'error', text: '❌ No se detectaron rostros' });
       }
       

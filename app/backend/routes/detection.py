@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import base64
@@ -12,6 +13,49 @@ from app.backend.core.config import settings
 from app.backend.db.database import get_db
 from app.backend.models.person import Detection, KnownPerson
 from app.backend.services.face_recognition import vector_distance
+
+
+def _recognize_face(face_location, rgb_frame, known_persons, threshold):
+    """Reconoce un rostro concreto de forma independiente."""
+    try:
+        face_encodings = face_recognition.face_encodings(rgb_frame, [face_location])
+    except Exception:
+        return None
+
+    if not face_encodings:
+        return None
+
+    vector = face_encodings[0].tolist()
+    best_match = None
+    best_distance = float("inf")
+
+    for person in known_persons:
+        distance = vector_distance(vector, person.vector)
+        if distance < best_distance:
+            best_distance = distance
+            best_match = person
+
+    recognized = best_match is not None and best_distance <= threshold
+    return {
+        "vector": vector,
+        "recognized": recognized,
+        "person_id": best_match.id if recognized else None,
+        "person_name": f"{best_match.name} {best_match.surname}" if recognized else "Persona no registrada",
+        "confidence": round((1 - best_distance) * 100, 2) if best_match else 0,
+    }
+
+
+def _get_next_user_name(db: Session) -> str:
+    """Genera un nombre único del estilo Usuario N para los registros automáticos."""
+    existing_users = db.query(KnownPerson).filter(KnownPerson.name.like("Usuario %")).all()
+    numbers = []
+    for person in existing_users:
+        try:
+            numbers.append(int(str(person.name).split()[-1]))
+        except (ValueError, IndexError):
+            continue
+    next_number = max(numbers, default=0) + 1
+    return f"Usuario {next_number}"
 
 router = APIRouter()
 
@@ -39,51 +83,69 @@ async def detect_frame(image: str = Form(...), db: Session = Depends(get_db)):
                 "message": "No se detectaron rostros"
             })
 
-        face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+        known_persons = db.query(KnownPerson).all()
+        threshold = settings.FACE_RECOGNITION_THRESHOLD
 
-        if not face_encodings:
+        detections_to_add = []
+        results = []
+
+        with ThreadPoolExecutor(max_workers=min(8, max(1, len(face_locations)))) as executor:
+            futures = [
+                executor.submit(_recognize_face, face_location, rgb_frame, known_persons, threshold)
+                for face_location in face_locations
+            ]
+            for future in futures:
+                result = future.result()
+                if result is None:
+                    continue
+
+                if not result["recognized"]:
+                    new_person = KnownPerson(
+                        name=_get_next_user_name(db),
+                        surname="",
+                        vector=result["vector"],
+                        person_metadata={
+                            "registered_at": datetime.now().isoformat(),
+                            "auto_registered": True,
+                        }
+                    )
+                    db.add(new_person)
+                    db.flush()
+                    db.refresh(new_person)
+
+                    result["recognized"] = True
+                    result["person_id"] = new_person.id
+                    result["person_name"] = new_person.name
+                    result["confidence"] = 100
+                    known_persons.append(new_person)
+
+                results.append(result)
+                detections_to_add.append(
+                    Detection(
+                        vector=result["vector"],
+                        recognized=result["recognized"],
+                        known_person_id=result["person_id"]
+                    )
+                )
+
+        if detections_to_add:
+            db.add_all(detections_to_add)
+            db.commit()
+
+        if not results:
             return JSONResponse(content={
                 "detected": False,
                 "message": "No se pudo extraer el vector facial"
             })
 
-        vector = face_encodings[0].tolist()
-
-        known_persons = db.query(KnownPerson).all()
-
-        best_match = None
-        best_distance = float("inf")
-
-        for person in known_persons:
-            distance = vector_distance(vector, person.vector)
-            if distance < best_distance:
-                best_distance = distance
-                best_match = person
-
-        threshold = settings.FACE_RECOGNITION_THRESHOLD
-        recognized = best_match is not None and best_distance <= threshold
-
-        detection = Detection(
-            vector=vector,
-            recognized=recognized,
-            known_person_id=best_match.id if recognized else None
-        )
-        db.add(detection)
-        db.commit()
-        db.refresh(detection)
-
-        if recognized:
-            return JSONResponse(content={
-                "detected": True,
-                "person_name": f"{best_match.name} {best_match.surname}",
-                "confidence": round((1 - best_distance) * 100, 2),
-                "person_id": best_match.id
-            })
-
+        primary_result = next((result for result in results if result["recognized"]), results[0])
         return JSONResponse(content={
             "detected": True,
-            "person_name": "Persona no registrada",
-            "confidence": round((1 - best_distance) * 100, 2) if best_match else 0
+            "detections": results,
+            "person_name": primary_result["person_name"],
+            "confidence": primary_result["confidence"],
+            "person_id": primary_result["person_id"],
+            "recognized": primary_result["recognized"],
         })
 
     except HTTPException:
